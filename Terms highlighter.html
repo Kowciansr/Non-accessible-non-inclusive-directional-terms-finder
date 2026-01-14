@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Check for Directional/ Non-inclusive and Non-accessible Terms</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+  <style>
+    :root {
+      --primary: #2196F3;
+      --success: #4CAF50;
+      --warning: #FFC107;
+      --error: #f44336;
+      --bg: #f8f9fa;
+      --text: #333;
+      --accent: #673ab7;
+      --highlight: #ffeb3b;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+    h1 { margin: 0; color: #1a73e8; }
+    .status-bar {
+      background: #e3f2fd;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-weight: 500;
+      color: #0d47a1;
+    }
+    .input-section {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .card {
+      border: 1px solid #e0e0e0;
+      padding: 15px;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .card h3 { margin-top: 0; font-size: 1.1rem; color: #333; }
+    
+    textarea {
+      width: 100%;
+      height: 180px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 14px;
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+
+    #customPatterns {
+      height: 80px;
+      font-size: 13px;
+    }
+
+    .actions {
+      text-align: center;
+      margin: 20px 0;
+    }
+    button {
+      padding: 14px 40px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: white;
+      background-color: var(--primary);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    button:hover:not(:disabled) { background-color: #1976D2; }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 25px;
+      margin-top: 30px;
+    }
+
+    .result-box {
+      border-radius: 8px;
+      padding: 20px;
+      border-left: 5px solid #ccc;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: none;
+    }
+    .result-box h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 15px; }
+
+    .match-success { border-left-color: var(--success); }
+    .access-warning { border-left-color: var(--warning); }
+    
+    .diff-list {
+      max-height: 500px;
+      overflow-y: auto;
+      background: #f1f1f1;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.95rem;
+    }
+    .diff-item {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    .timestamp { font-weight: bold; color: #d32f2f; margin-right: 10px; }
+    
+    .suggestion-box {
+      margin-top: 8px;
+      color: #2e7d32;
+      font-weight: 500;
+      padding: 8px;
+      background: #e8f5e9;
+      border-radius: 4px;
+      border-left: 3px solid var(--success);
+    }
+
+    .wcag-info {
+      background: #f3e5f5;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      border: 1px solid #d1c4e9;
+    }
+    .wcag-info h3 { margin-top: 0; color: var(--accent); }
+    .wcag-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+    .wcag-card {
+      background: white;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .word-list {
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      color: #555;
+      word-break: break-all;
+    }
+    .param-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Check for Directional/ Non-inclusive and Non-accessible Terms</h1>
+    <p>You can check for other terms as well; however, they will be categorised under those three categories and can be removed at your end if not needed.</p>
+  </header>
+
+  <div id="status" class="status-bar">Initializing Analysis Engine...</div>
+
+  <div class="wcag-info">
+    <h3>Examples for your references</h3>
+    <div class="wcag-grid">
+      <div class="wcag-card">
+        <div class="param-header">
+          <span>↔️</span>
+          <strong>Spatial References:</strong>
+        </div>
+        <div class="word-list">Left, Right, Top, Bottom, Above, Below, Under</div>
+      </div>
+      <div class="wcag-card">
+        <div class="param-header">
+          <span>❌</span>
+          <strong>Non-Accessible Terms:</strong>
+        </div>
+        <div class="word-list">Click, Hover, Drag and drop, Press</div>
+      </div>
+      <div class="wcag-card">
+        <div class="param-header">
+          <span>⚠️</span>
+          <strong>Non-Inclusive Terms:</strong>
+        </div>
+        <div class="word-list">See, Look, Hear</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-section">
+    <div class="card">
+      <h3>CONTENT</h3>
+      <textarea id="textInput" placeholder="Paste your text content here..."></textarea>
+    </div>
+    <div class="card">
+      <h3>Search Terms (Editable Patterns)</h3>
+      <textarea id="customPatterns" placeholder="Enter comma-separated words.">Left, Right, Top, Bottom, Above, Below, Under, Click, Hover over, Drag and drop, Press, Zoom in, See, Look, Hear</textarea>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="runBtn" onclick="runAudit()" disabled>Check Now</button>
+  </div>
+
+  <div class="results-grid">
+    <div id="accessResult" class="result-box">
+      <h2 id="accessTitle">Detailed Breakdown</h2>
+      <div id="accessContent" class="diff-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let pyodide;
+
+  async function initPyodide() {
+    try {
+      pyodide = await loadPyodide();
+      document.getElementById('status').innerText = "Ready to analyze.";
+      document.getElementById('runBtn').disabled = false;
+    } catch (err) {
+      document.getElementById('status').innerText = "Engine Error: " + err.message;
+    }
+  }
+
+  initPyodide();
+
+  async function runAudit() {
+    const inputText = document.getElementById('textInput').value.trim();
+    const customInput = document.getElementById('customPatterns').value.trim();
+
+    if (!inputText) {
+      alert("Please paste some text to audit.");
+      return;
+    }
+
+    document.getElementById('status').innerText = "Analyzing text patterns...";
+
+    const pythonCode = `
+import re
+from js import input_data, custom_data
+
+patterns = []
+if custom_data:
+    raw_list = [p.strip() for p in custom_data.split(',') if p.strip()]
+    for p in raw_list:
+        patterns.append(f'\\\\b{re.escape(p)}\\\\b')
+
+if not patterns:
+    MASTER_PATTERN = r'__NEVER_MATCH__'
+else:
+    MASTER_PATTERN = '|'.join(patterns)
+
+ACCESSIBILITY_RE = re.compile(MASTER_PATTERN, re.IGNORECASE)
+
+CATEGORIES = {
+    'left': 'directional term',
+    'right': 'directional term',
+    'top': 'directional term',
+    'bottom': 'directional term',
+    'above': 'directional term',
+    'below': 'directional term',
+    'under': 'directional term',
+    'click': 'non-accessible term',
+    'tap': 'non-accessible term',
+    'press': 'non-accessible term',
+    'hover': 'non-accessible term',
+    'swipe': 'non-accessible term',
+    'drag and drop': 'non-accessible term',
+    'use your mouse': 'non-accessible term',
+    'zoom in': 'non-accessible term',
+    'see': 'non-inclusive term',
+    'look': 'non-inclusive term',
+    'hear': 'non-inclusive term',
+    'watch': 'non-inclusive term',
+
+}
+
+
+def get_category(word):
+    word = word.lower()
+    return CATEGORIES.get(word, "non-inclusive term")
+
+
+def extract_sentence(text, word):
+    # Basic sentence splitter logic
+    sentences = re.split(r'(?<=[.!?])\\s+', text)
+    for s in sentences:
+        if re.search(f'\\\\b{re.escape(word)}\\\\b', s, re.IGNORECASE):
+            return s.strip()
+    return text
+
+def perform_audit():
+    lines = input_data.splitlines()
+    found_entries = []
+    current_ts = ""
+    
+    for line in lines:
+        line = line.strip()
+        if not line: continue
+        
+        ts_match = re.search(r'(\\d{2}:\\d{2}:\\d{2}\\.\\d{3})\\s*-->\\s*(\\d{2}:\\d{2}:\\d{2}\\.\\d{3})', line)
+        if ts_match:
+            current_ts = f"[{ts_match.group(1)}]"
+            continue
+            
+        matches = ACCESSIBILITY_RE.finditer(line)
+        for m in matches:
+            word = m.group(0)
+            sentence = extract_sentence(line, word)
+            found_entries.append({
+                "word": word, 
+                "timestamp": current_ts, 
+                "sentence": sentence,
+                "category": get_category(word)
+                
+            })
+    
+    return {
+        "entries": found_entries
+    }
+
+perform_audit()
+`;
+
+    try {
+      window.input_data = inputText;
+      window.custom_data = customInput;
+      
+      const result = await pyodide.runPythonAsync(pythonCode);
+      const auditResults = result.toJs();
+      
+      displayResults(auditResults);
+      document.getElementById('status').innerText = "Analysis Complete.";
+    } catch (err) {
+      console.error(err);
+      document.getElementById('status').innerText = "Error: " + err.message;
+    }
+  }
+
+  function displayResults(data) {
+    const accessBox = document.getElementById('accessResult');
+    const accessContent = document.getElementById('accessContent');
+    const accessTitle = document.getElementById('accessTitle');
+    
+    accessBox.style.display = "block";
+    accessContent.innerHTML = "";
+
+    const entries = data.get('entries');
+
+    if (entries.length === 0) {
+      accessBox.className = "result-box match-success";
+      accessTitle.innerText = "✅ Content is Accessible";
+      accessContent.innerHTML = "No issues detected.";
+    } else {
+      accessBox.className = "result-box access-warning";
+      accessTitle.innerText = `⚠️ Issues Found (${entries.length})`;
+      
+      entries.forEach(item => {
+        const word = item.get('word');
+        const timestamp = item.get('timestamp');
+        const sentence = item.get('sentence');
+        const category = item.get('category');
+        
+
+        accessContent.innerHTML += `
+          <div class="diff-item">
+            ${timestamp ? `<span class="timestamp">${timestamp}</span>` : ''}
+            The ${category} <strong>"${word}"</strong> is used in this statement:<br>
+            <em>"${sentence}"</em>
+            
+          </div>`;
+      });
+    }
+    
+    accessBox.scrollIntoView({ behavior: 'smooth' });
+  }
+</script>
+
+</body>
+</html>
