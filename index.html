@@ -133,16 +133,6 @@
     }
     .timestamp { font-weight: bold; color: #d32f2f; margin-right: 10px; }
     
-    .suggestion-box {
-      margin-top: 8px;
-      color: #2e7d32;
-      font-weight: 500;
-      padding: 8px;
-      background: #e8f5e9;
-      border-radius: 4px;
-      border-left: 3px solid var(--success);
-    }
-
     .wcag-info {
       background: #f3e5f5;
       border-radius: 8px;
@@ -153,7 +143,7 @@
     .wcag-info h3 { margin-top: 0; color: var(--accent); }
     .wcag-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 15px;
     }
     .wcag-card {
@@ -179,35 +169,29 @@
 
 <div class="container">
   <header>
-    <h1>Check for Directional/ Non-inclusive and Non-accessible Terms</h1>
-    <p>You can check for other terms as well; however, they will be categorised under those three categories and can be removed at your end if not needed.</p>
+    <h1>Audit for Non-Inclusive, Non-accessible & Directional Terms</h1>
   </header>
 
   <div id="status" class="status-bar">Initializing Analysis Engine...</div>
 
   <div class="wcag-info">
-    <h3>Examples for your references</h3>
+    <h3>Reference Categories</h3>
     <div class="wcag-grid">
       <div class="wcag-card">
-        <div class="param-header">
-          <span>↔️</span>
-          <strong>Directional Terms:</strong>
-        </div>
-        <div class="word-list">Left, Right, Top, Bottom, Above, Below, Under</div>
+        <div class="param-header"><span>↔️</span> <strong>Directional:</strong></div>
+        <div class="word-list">Left, Right, Top, etc.</div>
       </div>
       <div class="wcag-card">
-        <div class="param-header">
-          <span>❌</span>
-          <strong>Non-Accessible Terms:</strong>
-        </div>
-        <div class="word-list">Click, Hover, Drag and drop, Press</div>
+        <div class="param-header"><span>❌</span> <strong>Non-Accessible:</strong></div>
+        <div class="word-list">Click, Hover, Press</div>
       </div>
       <div class="wcag-card">
-        <div class="param-header">
-          <span>⚠️</span>
-          <strong>Non-Inclusive Terms:</strong>
-        </div>
+        <div class="param-header"><span>⚠️</span> <strong>Non-Inclusive:</strong></div>
         <div class="word-list">See, Look, Hear</div>
+      </div>
+      <div class="wcag-card">
+        <div class="param-header"><span>❓</span> <strong>Other:</strong></div>
+        <div class="word-list">Categorized as "Not Categorized"</div>
       </div>
     </div>
   </div>
@@ -218,7 +202,7 @@
       <textarea id="textInput" placeholder="Paste your text content here..."></textarea>
     </div>
     <div class="card">
-      <h3>Search Terms (Editable Patterns)</h3>
+      <h3>Search Terms (You can either keep these terms as is or make necessary modifications to this list of terms)</h3>
       <textarea id="customPatterns" placeholder="Enter comma-separated words.">Left, Right, Top, Bottom, Above, Below, Under, Click, Hover, Drag and drop, Press, Zoom in, See, Look, Hear</textarea>
     </div>
   </div>
@@ -298,17 +282,14 @@ CATEGORIES = {
     'look': 'non-inclusive term',
     'hear': 'non-inclusive term',
     'watch': 'non-inclusive term',
-
 }
-
 
 def get_category(word):
     word = word.lower()
-    return CATEGORIES.get(word, "non-inclusive term")
-
+    # Changed default from "non-inclusive term" to "not categorized term"
+    return CATEGORIES.get(word, "not categorized term")
 
 def extract_sentence(text, word):
-    # Basic sentence splitter logic
     sentences = re.split(r'(?<=[.!?])\\s+', text)
     for s in sentences:
         if re.search(f'\\\\b{re.escape(word)}\\\\b', s, re.IGNORECASE):
@@ -338,12 +319,9 @@ def perform_audit():
                 "timestamp": current_ts, 
                 "sentence": sentence,
                 "category": get_category(word)
-                
             })
     
-    return {
-        "entries": found_entries
-    }
+    return {"entries": found_entries}
 
 perform_audit()
 `;
@@ -386,23 +364,18 @@ perform_audit()
         const timestamp = item.get('timestamp');
         const sentence = item.get('sentence');
         const category = item.get('category');
-        
 
         accessContent.innerHTML += `
           <div class="diff-item">
             ${timestamp ? `<span class="timestamp">${timestamp}</span>` : ''}
             The ${category} <strong>"${word}"</strong> is used in this statement:<br>
             <em>"${sentence}"</em>
-            
           </div>`;
       });
     }
-    
     accessBox.scrollIntoView({ behavior: 'smooth' });
   }
 </script>
 
 </body>
 </html>
-
-
